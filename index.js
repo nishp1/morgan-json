@@ -77,7 +77,8 @@ exports = module.exports = function logger(options) {
   }
 
   return function logger(req, res, next) {
-    var sock = req.socket;
+    var sock = req.socket
+      , end = res.end;
     req._startTime = new Date;
     req._remoteAddress = sock.socket ? sock.socket.remoteAddress : sock.remoteAddress;
 
@@ -99,6 +100,13 @@ exports = module.exports = function logger(options) {
       res.on('close', logRequest);
     }
 
+    // Proxy the real end function
+    res.end = function(chunk, encoding) {
+      res._body = chunk;
+
+      res.end = end;
+      res.end(chunk, encoding);
+    };
 
     next();
   };
@@ -153,19 +161,19 @@ exports.format = function(name, fmt){
  * Default format.
  */
 
-exports.format('default', ':remote-addr - - [:date] ":method :url HTTP/:http-version" :status :res[content-length] ":referrer" ":user-agent"');
+exports.format('default', '{"address": ":remote-addr", "date": ":date", "method": ":method", "url": ":url", "httpVersion": "HTTP/:http-version", "status": ":status", "contentLength": ":res[content-length]", "referrer": ":referrer", "userAgent": ":user-agent"}');
 
 /**
  * Short format.
  */
 
-exports.format('short', ':remote-addr - :method :url HTTP/:http-version :status :res[content-length] - :response-time ms');
+exports.format('short', '{"address": ":remote-addr", "method": ":method", "url": ":url", "httpVersion": "HTTP/:http-version", "status": ":status", "contentLength": ":res[content-length]", "time": ":response-time ms", "payload": ":payload", "response": ":res-body"}');
 
 /**
  * Tiny format.
  */
 
-exports.format('tiny', ':method :url :status :res[content-length] - :response-time ms');
+exports.format('tiny', '{"method": ":method", "url": ":url", "status", ":status", "contentLength": ":res[content-length]", "time", ":response-time ms"}');
 
 /**
  * dev (colored)
@@ -285,3 +293,17 @@ exports.token('res', function(req, res, field){
   return (res._headers || {})[field.toLowerCase()];
 });
 
+/**
+ * payload / request body
+ */
+
+exports.token('payload', function(req, res, field){
+  return (JSON.stringify(req.body) || '');
+});
+/**
+ * response body
+ */
+
+exports.token('res-body', function(req, res, field){
+  return (escape(res._body) || '');
+});

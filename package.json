@@ -1,5 +1,5 @@
 {
-  "name": "morgan",
+  "name": "morgan-json",
   "description": "connect's logger for node.js",
   "version": "1.0.1",
   "author": {
